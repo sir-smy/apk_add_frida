@@ -1,5 +1,5 @@
 ## 前言
-非root环境下frida持久化脚本,过滤掉apk签名效验
+非root环境下frida持久化脚本,一键重打包过滤掉app签名效验
 #### 安装
 需要python3  java环境
 
