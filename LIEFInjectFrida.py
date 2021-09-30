@@ -4,14 +4,6 @@ import shutil
 import zipfile
 import lief
 
-"""
- 使用方法：
-   python3 需要注入的apk  输出路径（注意结尾不要添加/） 注入so的名字（最好是第一个加载的） 
-            -apksign（可选项，写了就一键签名） -persistence(反正只多一个config文件，最好加上)
-
-   编写frida_script.js脚本   adb push frida_script.js  data/local/tmp 推送到手机
-"""
-
 
 class LIEFInject:
     def __init__(self, args):
@@ -103,7 +95,7 @@ class LIEFInject:
 
         apkname = os.path.splitext(os.path.split(apk_path)[1])[0]
         outfile = os.path.join(os.path.split(apk_path)[
-                                   0], apkname + "_Signed.apk")
+            0], apkname + "_Signed.apk")
 
         cmd = 'java -jar %s/apksignerNew.jar sign --ks %s --ks-key-alias %s --ks-pass pass:%s --key-pass pass:%s --out %s %s' % \
               (self.toolPath, keystore, alias, pswd, aliaspswd, outfile, apk_path)
@@ -116,7 +108,7 @@ class LIEFInject:
         """
         apkname = os.path.splitext(os.path.split(apk_path)[1])[0]
         outfile = os.path.join(os.path.split(apk_path)[
-                                   0], apkname + "_Signed.apk")
+            0], apkname + "_Signed.apk")
         write_str = """
             # 获取签名信息
             apk.signed={}

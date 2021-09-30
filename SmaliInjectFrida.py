@@ -6,8 +6,8 @@ import subprocess
 import zipfile
 
 
-class  SmaliInject:
-    def __init__(self,args):
+class SmaliInject:
+    def __init__(self, args):
         has_lib = False
         with zipfile.ZipFile(args.input, 'r') as apk_file:
             for item in apk_file.infolist():
@@ -42,7 +42,8 @@ class  SmaliInject:
         for dex in self.dexList:
             print(dex)
             if self.dexDecompile(dex):
-                smali_path = os.path.join(self.decompileDir,target_activity.replace('.','\\'))+".smali"
+                smali_path = os.path.join(
+                    self.decompileDir, target_activity.replace('.', '\\'))+".smali"
                 print(smali_path)
                 with open(smali_path, 'r') as fp:
                     lines = fp.readlines()
@@ -54,18 +55,23 @@ class  SmaliInject:
                         if lines[i].find(".method static constructor <clinit>()V") != -1:
                             if lines[i + 3].find(".line") != -1:
                                 code_line = lines[i + 3][-3:]
-                                lines.insert(i + 3, "%s%s\r" % (lines[i + 3][0:-3], str(int(code_line) - 2)))
-                                print("%s%s" % (lines[i + 3][0:-3], str(int(code_line) - 2)))
-                                lines.insert(i + 4, "const-string v0, \"frida-gadget\"\r")
+                                lines.insert(
+                                    i + 3, "%s%s\r" % (lines[i + 3][0:-3], str(int(code_line) - 2)))
+                                print(
+                                    "%s%s" % (lines[i + 3][0:-3], str(int(code_line) - 2)))
+                                lines.insert(
+                                    i + 4, "const-string v0, \"frida-gadget\"\r")
                                 lines.insert(i + 5,
                                              "invoke-static {v0}, Ljava/lang/System;->loadLibrary(Ljava/lang/String;)V\r")
                                 has_clinit = True
                                 break
                     if not has_clinit:
-                        lines.insert(start + 1, ".method static constructor <clinit>()V\r")
+                        lines.insert(
+                            start + 1, ".method static constructor <clinit>()V\r")
                         lines.insert(start + 2, ".registers 1\r")
                         lines.insert(start + 3, ".line 10\r")
-                        lines.insert(start + 4, "const-string v0, \"frida-gadget\"\r")
+                        lines.insert(
+                            start + 4, "const-string v0, \"frida-gadget\"\r")
                         lines.insert(start + 5,
                                      "invoke-static {v0}, Ljava/lang/System;->loadLibrary(Ljava/lang/String;)V\r")
                         lines.insert(start + 6, "return-void\r")
@@ -84,10 +90,10 @@ class  SmaliInject:
                 for item in orig_file.infolist():
                     if item.filename.startswith("classes") and item.filename.endswith(".dex"):
                         continue
-                    if item.filename.find("META-INF") == -1 :
+                    if item.filename.find("META-INF") == -1:
                         out_file.writestr(item, orig_file.read(item.filename))
                 for dex in self.dexList:
-                    out_file.write(dex,os.path.split(dex)[1])
+                    out_file.write(dex, os.path.split(dex)[1])
                 out_file.write(os.path.join(self.toolPath, "frida-gadget-14.2.18-android-arm.so"),
                                arcname="lib/armeabi-v7a/libfrida-gadget.so")
                 print("add lib/armeabi-v7a/libfrida-gadget.so")
@@ -101,7 +107,7 @@ class  SmaliInject:
         shutil.rmtree("decompile")
         return outapk
 
-    def addHook(self,apk_path):
+    def addHook(self, apk_path):
         with zipfile.ZipFile(apk_path, 'a')as apk_file:
             for item in apk_file.infolist():
                 if item.filename == "lib/armeabi-v7a/libfrida-gadget.so":
@@ -118,25 +124,61 @@ class  SmaliInject:
                     print("add lib/x86/libfrida-gadget.config.so")
                 continue
 
-    def signApk(self,apk_path):
-        keystore = os.path.join(self.toolPath,'APPkeystore.jks')
+    def signApk(self, apk_path):
+        keystore = os.path.join(self.toolPath, 'APPkeystore.jks')
         alias = 'key0'
         pswd = 'qwer1234'
         aliaspswd = 'qwer1234'
 
         apkname = os.path.splitext(os.path.split(apk_path)[1])[0]
-        outfile = os.path.join(os.path.split(apk_path)[0], apkname + "_Signed.apk")
+        outfile = os.path.join(os.path.split(apk_path)[
+                               0], apkname + "_Signed.apk")
 
-        cmd = 'java -jar %s\\apksignerNew.jar sign --ks %s --ks-key-alias %s --ks-pass pass:%s --key-pass pass:%s --out %s %s'% \
-              (self.toolPath,keystore, alias,pswd,aliaspswd,outfile,apk_path)
+        cmd = 'java -jar %s\\apksignerNew.jar sign --ks %s --ks-key-alias %s --ks-pass pass:%s --key-pass pass:%s --out %s %s' % \
+              (self.toolPath, keystore, alias, pswd, aliaspswd, outfile, apk_path)
         os.system(cmd)
+
+    def signApk2(self, apk_path):
+        """
+        读取原apk签名 hook掉签名验证
+        """
+        apkname = os.path.splitext(os.path.split(apk_path)[1])[0]
+        outfile = os.path.join(os.path.split(apk_path)[
+            0], apkname + "_Signed.apk")
+        write_str = """
+            # 获取签名信息
+            apk.signed={}
+            
+            # 要处理的APK
+            apk.src={}
+            
+            # 写出的APK名
+            apk.out={}
+            
+            # 签名配置
+            sign.enable=true
+            sign.file={}/test.keystore
+            sign.password=123456
+            sign.alias=user
+            sign.aliasPassword=654321
+        """.format(args.input, apk_path, outfile, self.toolPath)
+
+        with open("config.txt", 'w', encoding="utf8") as f:
+            f.write(write_str.replace("\\", "/"))
+
+        cmd = 'java -jar %s/nkstool.jar' % self.toolPath
+
+        # print(cmd)
+        os.system(cmd)
+        os.remove("config.txt")
 
     def get_launchable_activity_aapt(self):
 
         aapt_path = os.path.join(self.toolPath, 'aapt.exe')
         cmd = '%s dump badging "%s" ' % (aapt_path, self.apkpath)
-        p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        out,err = p.communicate()
+        p = subprocess.Popen(cmd, stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        out, err = p.communicate()
         cmd_output = out.decode('utf-8').split('\r')
         for line in cmd_output:
             pattern = re.compile("launchable-activity: name='(\S+)'")
@@ -144,13 +186,16 @@ class  SmaliInject:
             if match:
                 # print match.group()[27:-1]
                 return match.group()[27:-1]
-    def dexCompile(self,dexPath):
+
+    def dexCompile(self, dexPath):
         baksmaliJarPath = os.path.join(self.toolPath, "smali-2.5.2.jar")
-        command = 'java -jar \"%s\" assemble -o \"%s\" \"%s\"' % (baksmaliJarPath, dexPath, self.decompileDir)
+        command = 'java -jar \"%s\" assemble -o \"%s\" \"%s\"' % (
+            baksmaliJarPath, dexPath, self.decompileDir)
         os.system(command)
         if not os.path.exists(dexPath):
             print(u"反编译失败")
-    def dexDecompile(self,dexPath):
+
+    def dexDecompile(self, dexPath):
         if os.path.exists(self.decompileDir):
             shutil.rmtree(self.decompileDir)
         baksmaliJarPath = os.path.join(self.toolPath, "baksmali-2.5.2.jar")
@@ -160,7 +205,8 @@ class  SmaliInject:
         if not os.path.exists(baksmaliJarPath):
             print(u"[dexDecompile] 文件%s不存在", baksmaliJarPath)
             return False
-        command = 'java -jar \"%s\" disassemble -o \"%s\" \"%s\"' % (baksmaliJarPath, self.decompileDir, dexPath)
+        command = 'java -jar \"%s\" disassemble -o \"%s\" \"%s\"' % (
+            baksmaliJarPath, self.decompileDir, dexPath)
         os.system(command)
         if not os.path.exists(self.decompileDir):
             print(u"[dexDecompile] 路径%s不存在", self.decompileDir)
@@ -174,7 +220,8 @@ if __name__ == "__main__":
     parser.add_argument('input', help="apk path")
     parser.add_argument('output', help="Folder to store output files")
     parser.add_argument('-apksign', help="Sign apk", action='store_true')
-    parser.add_argument('-persistence', help="HOOK Persistence ", action='store_true')
+    parser.add_argument(
+        '-persistence', help="HOOK Persistence ", action='store_true')
 
     args = parser.parse_args()
     tool = SmaliInject(args)
@@ -183,7 +230,8 @@ if __name__ == "__main__":
     if args.persistence:
         tool.addHook(out)
     if args.apksign:
-        tool.signApk(out)
-
+        # liefs.signApk(out)
+        # 读取原apk签名 hook掉签名验证
+        liefs.signApk2(out)
 
     print(u"sucess, new apk :"+out)
