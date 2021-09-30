@@ -1,0 +1,2 @@
+# apk_add_frida
+非root环境下frida持久化脚本,根据原apk过滤掉签名效验
